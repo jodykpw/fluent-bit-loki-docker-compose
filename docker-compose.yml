@@ -1,0 +1,192 @@
+version: "3.8"
+
+networks:
+  traefik:
+    external: true
+
+volumes:
+  fluent-bit_config:
+    name: fluent-bit_config
+  nginx_config:
+    name: nginx_config
+  loki_config:
+    name: loki_config
+
+services:
+  # Since the Loki containers are running as user 10001 and the mounted data volume is owned by root,
+  # Loki would not have permissions to create the directories.
+  # Therefore the init container changes permissions of the mounted directory.
+  init-loki:
+    image: busybox:1.35.0-uclibc
+    user: root
+    entrypoint:
+      - "chown"
+      - "10001:10001"
+      - "/etc/loki"
+    volumes:
+      - loki_config:/etc/loki
+    networks:
+      - traefik
+
+  # Ensure the correct permissions are applied to it.
+  init-nginx-config:
+    image: busybox:1.35.0-uclibc
+    user: root
+    entrypoint:
+      - "chown"
+      - "0:0"
+      - "/etc/nginx"
+    volumes:
+      - nginx_config:/etc/nginx
+    networks:
+      - traefik
+
+  # Ensure the correct permissions are applied to it.
+  init-fluent-bit-config:
+    image: busybox:1.35.0-uclibc
+    user: root
+    entrypoint:
+      - "chown"
+      - "0:0"
+      - "/fluent-bit/etc"
+    volumes:
+      - fluent-bit_config:/fluent-bit/etc
+    networks:
+      - traefik
+
+  loki-gateway:
+    image: nginx:1.27
+    volumes:
+      - nginx_config:/etc/nginx
+    ports:
+      - "3100:3100"
+    networks:
+      - traefik
+    env_file: ./.env
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: 'true'
+        tag: loki.loki-gateway
+    # # Labels: Sets Traefik configuration for routing. Un-comment if you need to expose the Loki gateway to internal or external networks.
+    # labels:
+    #   # Dynamic configuration with Docker Labels
+    #   # Ref: https://docs.traefik.io/reference/dynamic-configuration/docker/
+    #   # Explicitly tell Traefik to expose this container
+    #   - traefik.enable=true   
+    #   # The domain the service will respond to
+    #   - traefik.http.routers.loki-gateway-router.rule=Host(`loki-gateway-server-1.domain.com`)
+    #   # Allow request only from the predefined entry point named "web" http port
+    #   - traefik.http.routers.loki-gateway-router.entrypoints=web
+    #   # Set the service parameter on the router.
+    #   - traefik.http.routers.loki-gateway-router.service=loki-gateway-service
+    #   # Forwarding requests to more than one port on a container requires referencing the 
+    #   # service loadbalancer port definition using the service parameter on the router.
+    #   - traefik.http.services.loki-gateway-service.loadbalancer.server.port=3100
+
+  loki-read:
+    image: &lokiImage grafana/loki:2.9.10
+    volumes:
+      - loki_config:/etc/loki/
+    # only needed for interactive debugging with dlv
+    # cap_add:
+    #   - SYS_PTRACE
+    # security_opt:
+    #   - apparmor=unconfined
+    ports:
+      - "3100"
+      - "7946"
+      # uncomment to use interactive debugging
+      # - "40000-40002:40000" # makes the replicas available on ports 40000, 40001, 40002
+    command: "-config.file=/etc/loki/loki.yaml -target=read -legacy-read-mode=false"
+    networks:
+      - traefik
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 3
+    env_file: ./.env
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: 'true'
+        tag: loki.loki-read
+
+  loki-write:
+    image: *lokiImage
+    volumes:
+      - loki_config:/etc/loki/
+    # only needed for interactive debugging with dlv
+    # cap_add:
+    #   - SYS_PTRACE
+    # security_opt:
+    #   - apparmor=unconfined
+    ports:
+      - "3100"
+      - "7946"
+      # uncomment to use interactive debugging
+      # - "50000-50002:40000" #  makes the replicas available on ports 50000, 50001, 50002
+    command: "-config.file=/etc/loki/loki.yaml -target=write"
+    networks:
+      - traefik
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 3
+    env_file: ./.env
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: 'true'
+        tag: loki.loki-write
+
+  loki-backend:
+    image: *lokiImage
+    volumes:
+      - loki_config:/etc/loki/
+    # only needed for interactive debugging with dlv
+    # cap_add:
+    #   - SYS_PTRACE
+    # security_opt:
+    #   - apparmor=unconfined
+    ports:
+      - "3100"
+      - "7946"
+      # uncomment to use interactive debugging
+      # - "60000-60002:40000" #  makes the replicas available on ports 60000, 60001, 60002
+    command: "-config.file=/etc/loki/loki.yaml -target=backend -legacy-read-mode=false"
+    networks:
+      - traefik
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 3
+    env_file: ./.env
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: 'true'
+        tag: loki.loki-backend
+
+  fluent-bit:
+    image: fluent/fluent-bit:3.1.6
+    restart: always
+    volumes:
+      - fluent-bit_config:/fluent-bit/etc
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "127.0.0.1:24224:24224"
+      - "127.0.0.1:24224:24224/udp"
+    networks:
+      - traefik
+    env_file: ./.env
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: 'true'
+        tag: loki.fluent-bit
