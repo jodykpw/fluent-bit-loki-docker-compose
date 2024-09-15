@@ -69,7 +69,7 @@ services:
         fluentd-address: 127.0.0.1:24224
         fluentd-async: 'true'
         tag: loki.loki-gateway
-    # # Labels: Sets Traefik configuration for routing. Un-comment if you need to expose the Loki gateway to internal or external networks.
+    # # Labels: Sets Traefik configuration for routing. Un-comment if you need to expose the Loki gateway to external or internal networks.
     # labels:
     #   # Dynamic configuration with Docker Labels
     #   # Ref: https://docs.traefik.io/reference/dynamic-configuration/docker/
