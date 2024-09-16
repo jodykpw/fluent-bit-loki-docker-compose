@@ -16,40 +16,19 @@ services:
   # Since the Loki containers are running as user 10001 and the mounted data volume is owned by root,
   # Loki would not have permissions to create the directories.
   # Therefore the init container changes permissions of the mounted directory.
-  init-loki:
+  init-all:
     image: busybox:1.35.0-uclibc
     user: root
     entrypoint:
-      - "chown"
-      - "10001:10001"
-      - "/etc/loki"
+      - "sh"
+      - "-c"
+      - |
+        chown 10001:10001 /etc/loki/* && \
+        chown 0:0 /etc/nginx/* && \
+        chown 0:0 /fluent-bit/etc/*
     volumes:
       - loki_config:/etc/loki
-    networks:
-      - traefik
-
-  # Ensure the correct permissions are applied to it.
-  init-nginx-config:
-    image: busybox:1.35.0-uclibc
-    user: root
-    entrypoint:
-      - "chown"
-      - "0:0"
-      - "/etc/nginx"
-    volumes:
       - nginx_config:/etc/nginx
-    networks:
-      - traefik
-
-  # Ensure the correct permissions are applied to it.
-  init-fluent-bit-config:
-    image: busybox:1.35.0-uclibc
-    user: root
-    entrypoint:
-      - "chown"
-      - "0:0"
-      - "/fluent-bit/etc"
-    volumes:
       - fluent-bit_config:/fluent-bit/etc
     networks:
       - traefik
