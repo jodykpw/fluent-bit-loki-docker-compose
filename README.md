@@ -40,19 +40,6 @@ Make sure to set the following variables in your GitLab CI/CD settings:
 * MINIO_ACCESS_KEY_ID: MinIO access key.
 * MINIO_SECRET_ACCESS_KEY: MinIO secret access key.
 
-### Customising .env
-
-It is **not recommended** to store sensitive information such as passwords directly in the `.env` file and push it to the repository, as this can expose critical data. Instead, sensitive values such as passwords should be stored in GitLab CI/CD environment variables for secure management.
-
-The `.env` file can still be used for non-sensitive configuration settings. For example:
-
-```env
-# Non-sensitive configurations can be kept here
-COMPOSE_PROJECT_NAME=loki
-```
-
-For sensitive configurations like username and passwords, store these in GitLab CI/CD variables, these GitLab CI/CD variables will automatically be injected into the pipeline during the deployment process, ensuring security and preventing the exposure of sensitive information in your codebase.
-
 ## Usage
 
 ### 1. Deployment

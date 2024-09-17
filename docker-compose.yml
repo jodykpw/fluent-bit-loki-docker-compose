@@ -41,7 +41,6 @@ services:
       - "3100:3100"
     networks:
       - traefik
-    env_file: ./.env
     logging:
       driver: fluentd
       options:
@@ -85,7 +84,6 @@ services:
     deploy:
       mode: replicated
       replicas: 3
-    env_file: ./.env
     logging:
       driver: fluentd
       options:
@@ -114,7 +112,6 @@ services:
     deploy:
       mode: replicated
       replicas: 3
-    env_file: ./.env
     logging:
       driver: fluentd
       options:
@@ -143,7 +140,6 @@ services:
     deploy:
       mode: replicated
       replicas: 3
-    env_file: ./.env
     logging:
       driver: fluentd
       options:
@@ -162,7 +158,6 @@ services:
       - "127.0.0.1:24224:24224/udp"
     networks:
       - traefik
-    env_file: ./.env
     logging:
       driver: fluentd
       options:
