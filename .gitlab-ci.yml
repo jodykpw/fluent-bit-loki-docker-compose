@@ -53,14 +53,14 @@ ssh_scp_docker-compose-up:
   script:
     - *deployment_job
     # Use SSH to remotely execute a Docker Compose to start the services command on a server. 
-    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker-compose -p loki -f ${REMOTE_SERVER_DEPLOY_FOLDER}/docker-compose.yml up -d"
+    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker-compose -p logging -f ${REMOTE_SERVER_DEPLOY_FOLDER}/docker-compose.yml up -d"
     # Copy data to the container.
-    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker cp ${REMOTE_SERVER_DEPLOY_FOLDER}/config/loki.yaml loki-loki-write-1:/etc/loki"
-    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker cp ${REMOTE_SERVER_DEPLOY_FOLDER}/config/fluent-bit.conf loki-fluent-bit-1:/fluent-bit/etc"
-    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker cp ${REMOTE_SERVER_DEPLOY_FOLDER}/config/parsers.conf loki-fluent-bit-1:/fluent-bit/etc"
-    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker cp ${REMOTE_SERVER_DEPLOY_FOLDER}/config/nginx.conf loki-loki-gateway-1:/etc/nginx"
+    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker cp ${REMOTE_SERVER_DEPLOY_FOLDER}/config/loki.yaml logging-loki-write-1:/etc/loki"
+    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker cp ${REMOTE_SERVER_DEPLOY_FOLDER}/config/fluent-bit.conf logging-fluent-bit-1:/fluent-bit/etc"
+    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker cp ${REMOTE_SERVER_DEPLOY_FOLDER}/config/parsers.conf logging-fluent-bit-1:/fluent-bit/etc"
+    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker cp ${REMOTE_SERVER_DEPLOY_FOLDER}/config/nginx.conf logging-loki-gateway-1:/etc/nginx"
     # Docker Compose file to use and restarts the specific service within that Compose environment.
-    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker-compose -p loki -f ${REMOTE_SERVER_DEPLOY_FOLDER}/docker-compose.yml restart" 
+    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker-compose -p logging -f ${REMOTE_SERVER_DEPLOY_FOLDER}/docker-compose.yml restart" 
     - *cleanup_job 
   needs: ["test_ssh_connection"]
   when: manual
@@ -78,7 +78,7 @@ ssh_scp_docker-compose-down:
   stage: shutdown
   script:
     - *deployment_job
-    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker-compose -p loki -f ${REMOTE_SERVER_DEPLOY_FOLDER}/docker-compose.yml down"
+    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker-compose -p logging -f ${REMOTE_SERVER_DEPLOY_FOLDER}/docker-compose.yml down"
     - *cleanup_job
   needs: ["ssh_scp_docker-compose-up"]
   when: manual
@@ -90,7 +90,7 @@ ssh_scp_docker-compose-remove:
   script:
     - *deployment_job
     # Remove named volumes declared in your docker-compose.yml
-    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker-compose -p loki -f ${REMOTE_SERVER_DEPLOY_FOLDER}/docker-compose.yml down --volumes"
+    - ssh $SSH_DOCKER_USER@$REMOTE_IPADDRESS "docker-compose -p logging -f ${REMOTE_SERVER_DEPLOY_FOLDER}/docker-compose.yml down --volumes"
     - *cleanup_job
   needs: ["ssh_scp_docker-compose-up"]
   when: manual
