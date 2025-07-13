@@ -1,0 +1,66 @@
+version: '3'
+
+volumes:
+  fluent-bit_config:
+    name: fluent-bit_config
+  loki_config:
+    name: loki_config
+
+networks:
+  traefik:
+    external: true
+
+services:
+  fluent-bit:
+    image: fluent/fluent-bit:4.0.4
+    container_name: fluent-bit
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - traefik
+    volumes:
+      # - /var/run/docker.sock:/var/run/docker.sock
+      - fluent-bit_config:/fluent-bit/etc
+    ports:
+      - "127.0.0.1:24224:24224"
+      - "127.0.0.1:24224:24224/udp"
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: 'true'
+        tag: loki.fluent-bit
+
+  loki:
+    image: grafana/loki:3.5
+    container_name: loki
+    restart: unless-stopped
+    networks:
+      - traefik
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - loki_config:/etc/loki/
+    # Labels: Sets Traefik configuration for routing. Un-comment if you need to expose the Loki gateway to internal or external networks.
+    # labels:
+    #   # Dynamic configuration with Docker Labels
+    #   # Ref: https://docs.traefik.io/reference/dynamic-configuration/docker/
+    #   # Explicitly tell Traefik to expose this container
+    #   - traefik.enable=true   
+    #   # The domain the service will respond to
+    #   - traefik.http.routers.loki-gateway-router.rule=Host(`loki.domain.com`)
+    #   # Allow request only from the predefined entry point named "web" http port
+    #   - traefik.http.routers.loki-gateway-router.entrypoints=web
+    #   # Set the service parameter on the router.
+    #   - traefik.http.routers.loki-gateway-router.service=loki-gateway-service
+    #   # Forwarding requests to more than one port on a container requires referencing the 
+    #   # service loadbalancer port definition using the service parameter on the router.
+    #   - traefik.http.services.loki-gateway-service.loadbalancer.server.port=3100
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: 127.0.0.1:24224
+        fluentd-async: 'true'
+        tag: loki.loki
